@@ -1,5 +1,5 @@
 {
-    "name": "knex-auto-migrate",
+    "name": "knex-migration-gen",
     "version": "0.0.1",
     "author": {
         "name": "Cristian Milatinov",
