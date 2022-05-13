@@ -1,0 +1,16 @@
+version: "3.5"
+services:
+  migration-postgres:
+    container_name: migration-postgres
+    image: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - target: 5432
+        published: 5432
+    volumes:
+      - postgres-db:/var/lib/postgresql/data
+volumes:
+  postgres-db:

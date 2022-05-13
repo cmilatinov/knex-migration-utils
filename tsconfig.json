@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "module": "CommonJS",
+        "moduleResolution": "Node",
+        "target": "ES2021",
+        "esModuleInterop": true,
+        "outDir": "build"
+    },
+    "include": ["src/**/*"]
+}
