@@ -7,7 +7,8 @@ exports.TableComparator = void 0;
 const knex_1 = __importDefault(require("knex"));
 const lodash_1 = __importDefault(require("lodash"));
 class TableComparator {
-    constructor(config) {
+    constructor(args, config) {
+        this.args = args;
         this.config = config;
         this.db = (0, knex_1.default)(config.database);
     }
@@ -41,7 +42,7 @@ class TableComparator {
                 cons.column_name === c.column_name)
         }));
         // Query old table information
-        this.oldColumnList = await this.db('dev.table_columns');
+        this.oldColumnList = await this.db(`${this.args.schema}.table_columns`);
     }
     computeDifferences() {
         const tableList = lodash_1.default.uniq(this.columnList.map(c => `${c.schema_name}.${c.table_name}`));
@@ -76,26 +77,27 @@ class TableComparator {
             .filter(c => !tableListToDrop.includes(`${c.schema_name}.${c.table_name}`) &&
             !this.columnsToAlter.find(([_, dest]) => TableComparator.columnEquals(c, dest)));
     }
-    getTables() {
-        return this.tableList;
+    hasDifferences() {
+        return [
+            this.tablesToCreate,
+            this.tablesToDrop,
+            this.columnsToAlter,
+            this.columnsToAdd,
+            this.columnsToDrop
+        ].some(arr => arr.length > 0);
     }
-    getOldTables() {
-        return this.oldTableList;
-    }
-    getTablesToCreate() {
-        return this.tablesToCreate;
-    }
-    getTablesToDrop() {
-        return this.tablesToDrop;
-    }
-    getColumnsToAdd() {
-        return this.columnsToAdd;
-    }
-    getColumnsToDrop() {
-        return this.columnsToDrop;
-    }
-    getColumnsToAlter() {
-        return this.columnsToAlter;
+    getDifferencesInfo() {
+        return {
+            columnList: this.columnList,
+            oldColumnList: this.oldColumnList,
+            tableList: this.tableList,
+            oldTableList: this.oldTableList,
+            tablesToCreate: this.tablesToCreate,
+            tablesToDrop: this.tablesToDrop,
+            columnsToAlter: this.columnsToAlter,
+            columnsToAdd: this.columnsToAdd,
+            columnsToDrop: this.columnsToDrop,
+        };
     }
     getColumns() {
         return this.columnList;

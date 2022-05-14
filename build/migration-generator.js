@@ -29,8 +29,8 @@ const code_generator_1 = require("./code-generator");
 const table_comparator_1 = require("./table-comparator");
 const templates_1 = require("./templates");
 class MigrationGenerator {
-    constructor(config) {
-        this._comparator = new table_comparator_1.TableComparator(config);
+    constructor(args, config) {
+        this._comparator = new table_comparator_1.TableComparator(args, config);
         this._migrationUp = new code_generator_1.CodeGenerator();
         this._migrationDown = new code_generator_1.CodeGenerator();
     }
@@ -39,25 +39,19 @@ class MigrationGenerator {
     }
     async build() {
         await this._comparator.build();
-        const tables = this._comparator.getTables();
-        const oldTables = this._comparator.getOldTables();
+        const { tableList, oldTableList, tablesToCreate, tablesToDrop, columnsToAdd, columnsToDrop, columnsToAlter } = this._comparator.getDifferencesInfo();
         this._migrationUp.line();
         this._migrationDown.line();
-        const tablesToCreate = this._comparator.getTablesToCreate();
         tablesToCreate.forEach(t => this._migrationUp.createTable(t));
         tablesToCreate.forEach(t => this._migrationDown.dropTable(t));
-        const tablesToDrop = this._comparator.getTablesToDrop();
         tablesToDrop.forEach(t => this._migrationUp.dropTable(t));
         tablesToDrop.forEach(t => this._migrationDown.createTable(t));
-        const columnsToAdd = this._comparator.getColumnsToAdd();
-        this._migrationUp.addTableColumns(tables, columnsToAdd);
-        this._migrationDown.dropTableColumns(oldTables, columnsToAdd);
-        const columnsToDrop = this._comparator.getColumnsToDrop();
-        this._migrationUp.dropTableColumns(tables, columnsToDrop);
-        this._migrationDown.addTableColumns(oldTables, columnsToDrop);
-        const columnsToAlter = this._comparator.getColumnsToAlter();
-        this._migrationUp.alterTableColumns(oldTables, columnsToAlter.map(([_, dest]) => dest));
-        this._migrationDown.alterTableColumns(tables, columnsToAlter.map(([src, _]) => src));
+        this._migrationUp.addTableColumns(tableList, columnsToAdd);
+        this._migrationDown.dropTableColumns(oldTableList, columnsToAdd);
+        this._migrationUp.dropTableColumns(tableList, columnsToDrop);
+        this._migrationDown.addTableColumns(oldTableList, columnsToDrop);
+        this._migrationUp.alterTableColumns(oldTableList, columnsToAlter.map(([_, dest]) => dest));
+        this._migrationDown.alterTableColumns(tableList, columnsToAlter.map(([src, _]) => src));
     }
     generate(file, useTypescript = false) {
         let code = useTypescript ? templates_1.CODE_TEMPLATE_TS : templates_1.CODE_TEMPLATE_JS;

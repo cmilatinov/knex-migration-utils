@@ -1,7 +1,6 @@
-export default () => ({
+module.exports = () => ({
     schemas: [
-        'test',
-        'another'
+        'test'
     ],
     database: {
         client: 'pg',
