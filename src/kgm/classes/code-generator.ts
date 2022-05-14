@@ -1,6 +1,6 @@
 import _ from 'lodash';
 
-import { Table, TableColumn } from './interfaces/table';
+import { Table, TableColumn, TableIndex } from '../interfaces/table';
 import { TableComparator } from './table-comparator';
 
 const typeMapping: { [key: string]: (str: string) => string } = {
@@ -43,22 +43,39 @@ export class CodeGenerator {
         this.line(`        .alter();`, '\n', '\n    ');
     }
 
+    private dropIndex(index: TableIndex) {
+        if (index.is_unique) {
+            this.line(`    table.dropUnique(null, '${index.index_name}');`);
+        } else {
+            this.line(`    table.dropIndex(null, '${index.index_name}');`);
+        }
+    }
+
+    private addIndex(index: TableIndex) {
+        const columns = index.column_names.map(c => `'${c}'`).join(', ');
+        if (index.is_unique) {
+            this.line(`    table.unique([${columns}], { indexName: '${index.index_name}' });`);
+        } else {
+            this.line(`    table.index([${columns}], '${index.index_name}');`);
+        }
+    }
+
     private dropPrimary(table: Table) {
-        this.line(`await knex.schema.withSchema('${table.schema_name}').alterTable('${table.table_name}', function (table) {`);
+        this.alterTableBegin(table);
         this.line(`    table.dropPrimary();`);
-        this.line('});');
+        this.alterTableEnd();
     }
 
     private addPrimary(table: Table) {
-        this.line(`await knex.schema.withSchema('${table.schema_name}').alterTable('${table.table_name}', function (table) {`);
+        this.alterTableBegin(table);
         this.setPrimary(table);
-        this.line('});');
+        this.alterTableEnd();
     }
 
     private setPrimary(table: Table) {
         const pkColumns = table.columns.filter(c => c.is_primary_key);
         if (pkColumns.length > 0) {
-            this.line(`    table.primary([${pkColumns.map(c => `'${c.column_name}'`)}]);`);
+            this.line(`    table.primary([${pkColumns.map(c => `'${c.column_name}'`).join(', ')}]);`);
         }
     }
 
@@ -86,6 +103,9 @@ export class CodeGenerator {
 
         // Table columns
         table.columns.forEach(c => this.createColumn(c));
+
+        // Indexes
+        table.indexes.forEach(i => this.addIndex(i));
 
         // Primary key columns
         const primaryColumns = table.columns.filter(c => c.is_primary_key);
@@ -208,6 +228,8 @@ export class CodeGenerator {
         if (shouldRemakePrimaryKey) {
             this.addPrimary(table);
         }
+
+        this.line();
     }
 
     public alterTableColumns(tables: Table[], columns: TableColumn[]) {
@@ -217,6 +239,42 @@ export class CodeGenerator {
                     t.schema_name === arr[0].schema_name &&
                     t.table_name === arr[0].table_name);
                 this._alterTableColumns(table, arr);
+            });
+    }
+
+    private _addTableIndexes(table: Table, indexes: TableIndex[]) {
+        this.line(`// Add indexes to table '${table.schema_name}.${table.table_name}'`);
+        this.alterTableBegin(table);
+        indexes.map(i => this.addIndex(i));
+        this.alterTableEnd();
+        this.line();
+    }
+
+    public addTableIndexes(tables: Table[], indexes: TableIndex[]) {
+        Object.values(_.groupBy(indexes, i => `${i.schema_name}.${i.table_name}`))
+            .forEach(arr => {
+                const table = tables.find(t =>
+                    t.schema_name === arr[0].schema_name &&
+                    t.table_name === arr[0].table_name);
+                this._addTableIndexes(table, arr);
+            });
+    }
+
+    private _dropTableIndexes(table: Table, indexes: TableIndex[]) {
+        this.line(`// Drop indexes from table '${table.schema_name}.${table.table_name}'`);
+        this.alterTableBegin(table);
+        indexes.map(i => this.dropIndex(i));
+        this.alterTableEnd();
+        this.line();
+    }
+
+    public dropTableIndexes(tables: Table[], indexes: TableIndex[]) {
+        Object.values(_.groupBy(indexes, i => `${i.schema_name}.${i.table_name}`))
+            .forEach(arr => {
+                const table = tables.find(t =>
+                    t.schema_name === arr[0].schema_name &&
+                    t.table_name === arr[0].table_name);
+                this._dropTableIndexes(table, arr);
             });
     }
 

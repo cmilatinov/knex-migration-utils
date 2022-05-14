@@ -37,6 +37,12 @@ class CodeGenerator {
         this.generateColumn(column);
         this.line(`        .alter();`, '\n', '\n    ');
     }
+    dropIndex(index) {
+        this.line(`    table.dropIndex(null, '${index.index_name}');`);
+    }
+    addIndex(index) {
+        this.line(`    table.index([${index.column_names.map(c => `'${c}'`).join(', ')}], '${index.index_name}')`);
+    }
     dropPrimary(table) {
         this.line(`await knex.schema.withSchema('${table.schema_name}').alterTable('${table.table_name}', function (table) {`);
         this.line(`    table.dropPrimary();`);
@@ -50,7 +56,7 @@ class CodeGenerator {
     setPrimary(table) {
         const pkColumns = table.columns.filter(c => c.is_primary_key);
         if (pkColumns.length > 0) {
-            this.line(`    table.primary([${pkColumns.map(c => `'${c.column_name}'`)}]);`);
+            this.line(`    table.primary([${pkColumns.map(c => `'${c.column_name}'`).join(', ')}]);`);
         }
     }
     alterTableBegin(table) {
@@ -178,6 +184,32 @@ class CodeGenerator {
             const table = tables.find(t => t.schema_name === arr[0].schema_name &&
                 t.table_name === arr[0].table_name);
             this._alterTableColumns(table, arr);
+        });
+    }
+    _addTableIndexes(table, indexes) {
+        this.alterTableBegin(table);
+        indexes.map(i => this.addIndex(i));
+        this.alterTableEnd();
+    }
+    addTableIndexes(tables, indexes) {
+        Object.values(lodash_1.default.groupBy(indexes, i => `${i.schema_name}.${i.table_name}`))
+            .forEach(arr => {
+            const table = tables.find(t => t.schema_name === arr[0].schema_name &&
+                t.table_name === arr[0].table_name);
+            this._addTableIndexes(table, arr);
+        });
+    }
+    _dropTableIndexes(table, indexes) {
+        this.alterTableBegin(table);
+        indexes.map(i => this.dropIndex(i));
+        this.alterTableEnd();
+    }
+    dropTableIndexes(tables, indexes) {
+        Object.values(lodash_1.default.groupBy(indexes, i => `${i.schema_name}.${i.table_name}`))
+            .forEach(arr => {
+            const table = tables.find(t => t.schema_name === arr[0].schema_name &&
+                t.table_name === arr[0].table_name);
+            this._dropTableIndexes(table, arr);
         });
     }
     getCode() {

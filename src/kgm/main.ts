@@ -3,14 +3,20 @@ import * as fs from 'fs';
 import { DateTime } from 'luxon';
 import 'colors';
 
-import loadModule from './load-module';
-import { MigrationGenerator } from './migration-generator';
-import cliOptions, { ArgsObject } from './cli';
-import logger from './logger';
+import cliOptions, { ArgsObject, printHelp } from './cli';
+import { MigrationGenerator } from './classes/migration-generator';
+import loadModule from './utils/load-module';
+import logger from './utils/logger';
 
 async function main() {
     // Command line args
     const args = commandLineArgs(cliOptions) as ArgsObject;
+
+    // Print help
+    if (args.help) {
+        printHelp();
+        process.exit(0);
+    }
 
     try {
 
@@ -45,24 +51,21 @@ async function main() {
         fs.mkdirSync(args.migrations, { recursive: true });
 
         // Generate migration code
-        if (comparator.hasDifferences()) {
-            const timestamp = DateTime.now().toFormat('yyyyMMddHHmmss');
-            const migrationFile = `${args.migrations}/${timestamp}_${args.file}${args.typescript ? '.ts' : '.js'}`;
-            generator.generate(migrationFile, args.typescript);
-            logger.success(`Generated migration '${migrationFile}'.`);
+        if (!args.reset) {
+            if (comparator.hasDifferences()) {
+                const timestamp = DateTime.now().toFormat('yyyyMMddHHmmss');
+                const migrationFile = `${args.migrations}/${timestamp}_${args.filename}${args.typescript ? '.ts' : '.js'}`;
+                generator.generate(migrationFile, args.typescript);
+                logger.success(`Generated migration '${migrationFile}'.`);
+            } else {
+                logger.warn(`No differences were detected since the last migration. No new migration was generated.`);
+            }
         } else {
-            logger.warn(`No differences were detected since the last migration. No new migration was generated.`);
+            logger.warn(`Resetting database metadata. No migration will be generated.`);
         }
 
-        // Truncate columns table
-        await db(`${args.schema}.table_column`).truncate();
-
-        // Add new columns
-        const { columnList } = comparator.getDifferencesInfo();
-        if (columnList.length > 0) {
-            await db(`${args.schema}.table_column`)
-                .insert(comparator.getColumns());
-        }
+        // Update metadata
+        await comparator.updateMetadata();
 
         // Close database connection (in order to stop process)
         await db.destroy();

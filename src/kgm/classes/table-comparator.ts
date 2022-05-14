@@ -1,9 +1,9 @@
 import knex, { Knex } from 'knex';
 
-import { TableColumn, Table, TableIndex } from './interfaces/table';
-import { Config } from './interfaces/config';
+import { TableColumn, Table, TableIndex } from '../interfaces/table';
+import { Config } from '../interfaces/config';
 import _ from 'lodash';
-import { ArgsObject } from './cli';
+import { ArgsObject } from '../cli';
 
 export class TableComparator {
 
@@ -27,7 +27,6 @@ export class TableComparator {
     private columnsToAdd: TableColumn[];
     private columnsToDrop: TableColumn[];
 
-    private indexesToAlter: [TableIndex, TableIndex][];
     private indexesToAdd: TableIndex[];
     private indexesToDrop: TableIndex[];
 
@@ -75,7 +74,6 @@ export class TableComparator {
                     table.string('table_name').notNullable();
                     table.string('index_name').notNullable();
                     table.json('column_names').notNullable();
-                    table.boolean('is_clustered').notNullable();
                     table.boolean('is_unique').notNullable();
                     table.primary(['schema_name', 'table_name', 'index_name']);
                 });
@@ -123,12 +121,12 @@ export class TableComparator {
                     .groupBy('attrelid')
                     .as('column_names')
             )
-            .select('pgi.indisclustered as is_clustered')
             .select('pgi.indisunique as is_unique')
             .innerJoin('pg_class as idx', 'idx.oid', 'pgi.indexrelid')
             .innerJoin('pg_namespace as insp', 'insp.oid', 'idx.relnamespace')
             .innerJoin('pg_class as tbl', 'tbl.oid', 'pgi.indrelid')
             .innerJoin('pg_namespace as tnsp', 'tnsp.oid', 'tbl.relnamespace')
+            .where('pgi.indisprimary', false)
             .whereIn('tnsp.nspname', this.config.schemas);
 
         // Query old index information
@@ -144,7 +142,8 @@ export class TableComparator {
             return {
                 schema_name: parts[0],
                 table_name: parts[1],
-                columns: this.columnList.filter(c => c.schema_name === parts[0] && c.table_name === parts[1])
+                columns: this.columnList.filter(c => c.schema_name === parts[0] && c.table_name === parts[1]),
+                indexes: this.indexList.filter(i => i.schema_name === parts[0] && i.table_name === parts[1])
             };
         };
 
@@ -153,7 +152,8 @@ export class TableComparator {
             return {
                 schema_name: parts[0],
                 table_name: parts[1],
-                columns: this.oldColumnList.filter(c => c.schema_name === parts[0] && c.table_name === parts[1])
+                columns: this.oldColumnList.filter(c => c.schema_name === parts[0] && c.table_name === parts[1]),
+                indexes: this.oldIndexList.filter(i => i.schema_name === parts[0] && i.table_name === parts[1])
             };
         }
 
@@ -172,27 +172,17 @@ export class TableComparator {
             _.isEqual
         ).map(dest => [this.oldColumnList.find(src => TableComparator.columnEquals(dest, src)), dest]);
 
-        this.columnsToAdd = _.differenceWith(this.columnList, this.oldColumnList, _.isEqual)
-            .filter(c => !tableListToCreate.includes(`${c.schema_name}.${c.table_name}`) &&
-                !this.columnsToAlter.find(([_, dest]) => TableComparator.columnEquals(c, dest)));
+        this.columnsToAdd = _.differenceWith(this.columnList, this.oldColumnList, TableComparator.columnEquals)
+            .filter(c => !tableListToCreate.includes(`${c.schema_name}.${c.table_name}`));
 
-        this.columnsToDrop = _.differenceWith(this.oldColumnList, this.columnList, _.isEqual)
-            .filter(c => !tableListToDrop.includes(`${c.schema_name}.${c.table_name}`) &&
-                !this.columnsToAlter.find(([_, dest]) => TableComparator.columnEquals(c, dest)));
-
-        this.indexesToAlter = _.differenceWith(
-            _.intersectionWith(this.indexList, this.oldIndexList, TableComparator.indexEquals),
-            _.intersectionWith(this.oldIndexList, this.indexList, TableComparator.indexEquals),
-            _.isEqual
-        ).map(dest => [this.oldIndexList.find(src => TableComparator.indexEquals(dest, src)), dest]);
+        this.columnsToDrop = _.differenceWith(this.oldColumnList, this.columnList, TableComparator.columnEquals)
+            .filter(c => !tableListToDrop.includes(`${c.schema_name}.${c.table_name}`));
 
         this.indexesToAdd = _.differenceWith(this.indexList, this.oldIndexList, _.isEqual)
-            .filter(i => !tableListToCreate.includes(`${i.schema_name}.${i.table_name}`) &&
-                !this.indexesToAlter.find(([_, dest]) => TableComparator.indexEquals(i, dest)));
+            .filter(i => !tableListToCreate.includes(`${i.schema_name}.${i.table_name}`));
 
         this.indexesToDrop = _.differenceWith(this.oldIndexList, this.indexList, _.isEqual)
-            .filter(i => !tableListToDrop.includes(`${i.schema_name}.${i.table_name}`) &&
-                !this.indexesToAlter.find(([_, dest]) => TableComparator.indexEquals(i, dest)));
+            .filter(i => !tableListToDrop.includes(`${i.schema_name}.${i.table_name}`));
     }
 
 
@@ -202,7 +192,9 @@ export class TableComparator {
             this.tablesToDrop,
             this.columnsToAlter,
             this.columnsToAdd,
-            this.columnsToDrop
+            this.columnsToDrop,
+            this.indexesToAdd,
+            this.indexesToDrop
         ].some(arr => arr.length > 0);
     }
 
@@ -217,11 +209,33 @@ export class TableComparator {
             columnsToAlter: this.columnsToAlter,
             columnsToAdd: this.columnsToAdd,
             columnsToDrop: this.columnsToDrop,
+            indexesToAdd: this.indexesToAdd,
+            indexesToDrop: this.indexesToDrop
         };
     }
 
-    public getColumns() {
-        return this.columnList;
+    public async updateMetadata() {
+        const columnTable = `${this.args.schema}.table_column`;
+        const indexTable = `${this.args.schema}.table_index`;
+
+        // Truncate tables
+        await this.db(columnTable).truncate();
+        await this.db(indexTable).truncate();
+
+        // Add new columns
+        if (this.columnList.length > 0) {
+            await this.db(columnTable)
+                .insert(this.columnList);
+        }
+
+        // Add new indexes
+        if (this.indexList.length > 0) {
+            await this.db(indexTable)
+                .insert(this.indexList.map(i => ({
+                    ...i,
+                    column_names: JSON.stringify(i.column_names)
+                })));
+        }
     }
 
     public static columnEquals(a: TableColumn, b: TableColumn) {

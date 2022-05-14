@@ -2,9 +2,9 @@ import * as fs from 'fs';
 
 import { CodeGenerator } from './code-generator';
 import { TableComparator } from './table-comparator';
-import { Config } from './interfaces/config';
-import { CODE_TEMPLATE_TS, CODE_TEMPLATE_JS } from './templates';
-import { ArgsObject } from './cli';
+import { Config } from '../interfaces/config';
+import { CODE_TEMPLATE_TS, CODE_TEMPLATE_JS } from '../utils/templates';
+import { ArgsObject } from '../cli';
 
 export class MigrationGenerator {
 
@@ -32,7 +32,9 @@ export class MigrationGenerator {
             tablesToDrop,
             columnsToAdd,
             columnsToDrop,
-            columnsToAlter
+            columnsToAlter,
+            indexesToAdd,
+            indexesToDrop
         } = this._comparator.getDifferencesInfo();
 
         this._migrationUp.line();
@@ -44,6 +46,9 @@ export class MigrationGenerator {
         tablesToDrop.forEach(t => this._migrationUp.dropTable(t));
         tablesToDrop.forEach(t => this._migrationDown.createTable(t));
 
+        this._migrationUp.dropTableIndexes(tableList, indexesToDrop);
+        this._migrationDown.dropTableIndexes(oldTableList, indexesToAdd);
+
         this._migrationUp.addTableColumns(tableList, columnsToAdd);
         this._migrationDown.dropTableColumns(oldTableList, columnsToAdd);
 
@@ -52,6 +57,9 @@ export class MigrationGenerator {
 
         this._migrationUp.alterTableColumns(oldTableList, columnsToAlter.map(([_, dest]) => dest));
         this._migrationDown.alterTableColumns(tableList, columnsToAlter.map(([src, _]) => src));
+
+        this._migrationUp.addTableIndexes(tableList, indexesToAdd);
+        this._migrationDown.addTableIndexes(oldTableList, indexesToDrop);
     }
 
     public generate(file: string, useTypescript: boolean = false) {

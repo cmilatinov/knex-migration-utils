@@ -59,42 +59,31 @@ async function main() {
         const generator = new migration_generator_1.MigrationGenerator(args, config);
         const comparator = generator.getComparator();
         const db = comparator.getDB();
-        // Create columns table
-        await db.schema.createSchemaIfNotExists(args.schema);
-        if (!(await db.schema.withSchema(args.schema).hasTable('table_columns'))) {
-            await db.schema.withSchema(args.schema)
-                .createTable('table_columns', function (table) {
-                table.string('schema_name').notNullable();
-                table.string('table_name').notNullable();
-                table.string('column_name').notNullable();
-                table.integer('ordinal_position').notNullable();
-                table.string('data_type').notNullable();
-                table.boolean('is_nullable').notNullable();
-                table.boolean('is_primary_key').notNullable();
-                table.string('default_value').nullable();
-                table.primary(['schema_name', 'table_name', 'column_name', 'ordinal_position']);
-            });
-        }
         // Compute current and old table lists
         await generator.build();
         // Create migrations directory
         fs.mkdirSync(args.migrations, { recursive: true });
         // Generate migration code
-        if (comparator.hasDifferences()) {
-            const timestamp = luxon_1.DateTime.now().toFormat('yyyyMMddHHmmss');
-            const migrationFile = `${args.migrations}/${timestamp}_${args.file}${args.typescript ? '.ts' : '.js'}`;
-            generator.generate(migrationFile, args.typescript);
-            logger_1.default.success(`Generated migration '${migrationFile}'.`);
+        if (!args.reset) {
+            if (comparator.hasDifferences()) {
+                const timestamp = luxon_1.DateTime.now().toFormat('yyyyMMddHHmmss');
+                const migrationFile = `${args.migrations}/${timestamp}_${args.file}${args.typescript ? '.ts' : '.js'}`;
+                generator.generate(migrationFile, args.typescript);
+                logger_1.default.success(`Generated migration '${migrationFile}'.`);
+            }
+            else {
+                logger_1.default.warn(`No differences were detected since the last migration. No new migration was generated.`);
+            }
         }
         else {
-            logger_1.default.warn(`No differences were detected since the last migration. No new migration was generated.`);
+            logger_1.default.warn(`Resetting database metadata. No migration will be generated.`);
         }
         // Truncate columns table
-        await db(`${args.schema}.table_columns`).truncate();
+        await db(`${args.schema}.table_column`).truncate();
         // Add new columns
         const { columnList } = comparator.getDifferencesInfo();
         if (columnList.length > 0) {
-            await db(`${args.schema}.table_columns`)
+            await db(`${args.schema}.table_column`)
                 .insert(comparator.getColumns());
         }
         // Close database connection (in order to stop process)

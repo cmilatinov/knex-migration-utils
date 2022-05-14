@@ -39,19 +39,23 @@ class MigrationGenerator {
     }
     async build() {
         await this._comparator.build();
-        const { tableList, oldTableList, tablesToCreate, tablesToDrop, columnsToAdd, columnsToDrop, columnsToAlter } = this._comparator.getDifferencesInfo();
+        const { tableList, oldTableList, tablesToCreate, tablesToDrop, columnsToAdd, columnsToDrop, columnsToAlter, indexesToAdd, indexesToDrop } = this._comparator.getDifferencesInfo();
         this._migrationUp.line();
         this._migrationDown.line();
         tablesToCreate.forEach(t => this._migrationUp.createTable(t));
         tablesToCreate.forEach(t => this._migrationDown.dropTable(t));
         tablesToDrop.forEach(t => this._migrationUp.dropTable(t));
         tablesToDrop.forEach(t => this._migrationDown.createTable(t));
+        this._migrationUp.dropTableIndexes(tableList, indexesToDrop);
+        this._migrationDown.dropTableIndexes(oldTableList, indexesToAdd);
         this._migrationUp.addTableColumns(tableList, columnsToAdd);
         this._migrationDown.dropTableColumns(oldTableList, columnsToAdd);
         this._migrationUp.dropTableColumns(tableList, columnsToDrop);
         this._migrationDown.addTableColumns(oldTableList, columnsToDrop);
         this._migrationUp.alterTableColumns(oldTableList, columnsToAlter.map(([_, dest]) => dest));
         this._migrationDown.alterTableColumns(tableList, columnsToAlter.map(([src, _]) => src));
+        this._migrationDown.addTableIndexes(tableList, indexesToAdd);
+        this._migrationDown.addTableIndexes(oldTableList, indexesToDrop);
     }
     generate(file, useTypescript = false) {
         let code = useTypescript ? templates_1.CODE_TEMPLATE_TS : templates_1.CODE_TEMPLATE_JS;
