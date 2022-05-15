@@ -1,4 +1,5 @@
 import commandLineUsage, { Section, OptionDefinition } from 'command-line-usage';
+import { ArgsBase } from '../common/utils/load-config';
 
 const cliOptions: OptionDefinition[] = [
     {
@@ -86,7 +87,7 @@ const cliSections: Section[] = [
             },
             {},
             {
-                desc: `Generate a migration called 'create_table' in typescript, using 'meta_schema' `+
+                desc: `Generate a migration called 'create_table' in typescript, using 'meta_schema' ` +
                     `as the metadata schema and 'subfolder/my_config_file' as the config module.`,
                 example: '$ kgm create_table -t -s meta_schema -c subfolder/my_config_file'
             },
@@ -103,14 +104,12 @@ const cliSections: Section[] = [
     }
 ];
 
-export interface ArgsObject {
+export interface ArgsKGM extends ArgsBase {
     filename: string;
-    config: string;
     migrations: string;
     schema: string;
     typescript: boolean;
     reset: boolean;
-    help: boolean;
 }
 
 export function printHelp() {

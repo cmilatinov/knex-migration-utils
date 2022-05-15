@@ -1,13 +1,13 @@
 import knex, { Knex } from 'knex';
 
 import { TableColumn, Table, TableIndex } from '../interfaces/table';
-import { Config } from '../interfaces/config';
+import { Config } from '../../common/interfaces/config';
 import _ from 'lodash';
-import { ArgsObject } from '../cli';
+import { ArgsKGM } from '../cli';
 
 export class TableComparator {
 
-    private readonly args: ArgsObject;
+    private readonly args: ArgsKGM;
     private readonly config: Config;
     private readonly db: Knex;
 
@@ -30,7 +30,7 @@ export class TableComparator {
     private indexesToAdd: TableIndex[];
     private indexesToDrop: TableIndex[];
 
-    constructor(args: ArgsObject, config: Config) {
+    constructor(args: ArgsKGM, config: Config) {
         this.args = args;
         this.config = config;
         this.db = knex(config.database);

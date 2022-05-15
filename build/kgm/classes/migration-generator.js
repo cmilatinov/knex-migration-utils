@@ -27,7 +27,7 @@ exports.MigrationGenerator = void 0;
 const fs = __importStar(require("fs"));
 const code_generator_1 = require("./code-generator");
 const table_comparator_1 = require("./table-comparator");
-const templates_1 = require("./templates");
+const templates_1 = require("../utils/templates");
 class MigrationGenerator {
     constructor(args, config) {
         this._comparator = new table_comparator_1.TableComparator(args, config);
@@ -54,7 +54,7 @@ class MigrationGenerator {
         this._migrationDown.addTableColumns(oldTableList, columnsToDrop);
         this._migrationUp.alterTableColumns(oldTableList, columnsToAlter.map(([_, dest]) => dest));
         this._migrationDown.alterTableColumns(tableList, columnsToAlter.map(([src, _]) => src));
-        this._migrationDown.addTableIndexes(tableList, indexesToAdd);
+        this._migrationUp.addTableIndexes(tableList, indexesToAdd);
         this._migrationDown.addTableIndexes(oldTableList, indexesToDrop);
     }
     generate(file, useTypescript = false) {

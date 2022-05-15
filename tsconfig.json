@@ -4,7 +4,8 @@
         "moduleResolution": "Node",
         "target": "ES2021",
         "esModuleInterop": true,
-        "outDir": "build"
+        "outDir": "build",
+        "experimentalDecorators": true
     },
     "include": ["src/**/*"]
 }

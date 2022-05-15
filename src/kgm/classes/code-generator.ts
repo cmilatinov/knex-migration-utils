@@ -3,6 +3,7 @@ import _ from 'lodash';
 import { Table, TableColumn, TableIndex } from '../interfaces/table';
 import { TableComparator } from './table-comparator';
 
+// TODO: Abstract this into another file as it is specific to sql dialects
 const typeMapping: { [key: string]: (str: string) => string } = {
     uuid: column => `uuid(${column})`,
     varchar: column => `string(${column})`,
@@ -87,7 +88,7 @@ export class CodeGenerator {
         this.line(`});`);
     }
 
-    private renameColumns(table: Table, columns: [TableColumn,  TableColumn][]) {
+    private renameColumns(table: Table, columns: [TableColumn, TableColumn][]) {
         this.alterTableBegin(table);
         columns.map(([src, dest]) =>
             this.line(`    table.renameColumn('${src.column_name}', '${dest.column_name}');`)

@@ -6,6 +6,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CodeGenerator = void 0;
 const lodash_1 = __importDefault(require("lodash"));
 const table_comparator_1 = require("./table-comparator");
+// TODO: Abstract this into another file as it is specific to sql dialects
 const typeMapping = {
     uuid: column => `uuid(${column})`,
     varchar: column => `string(${column})`,
@@ -38,20 +39,31 @@ class CodeGenerator {
         this.line(`        .alter();`, '\n', '\n    ');
     }
     dropIndex(index) {
-        this.line(`    table.dropIndex(null, '${index.index_name}');`);
+        if (index.is_unique) {
+            this.line(`    table.dropUnique(null, '${index.index_name}');`);
+        }
+        else {
+            this.line(`    table.dropIndex(null, '${index.index_name}');`);
+        }
     }
     addIndex(index) {
-        this.line(`    table.index([${index.column_names.map(c => `'${c}'`).join(', ')}], '${index.index_name}')`);
+        const columns = index.column_names.map(c => `'${c}'`).join(', ');
+        if (index.is_unique) {
+            this.line(`    table.unique([${columns}], { indexName: '${index.index_name}' });`);
+        }
+        else {
+            this.line(`    table.index([${columns}], '${index.index_name}');`);
+        }
     }
     dropPrimary(table) {
-        this.line(`await knex.schema.withSchema('${table.schema_name}').alterTable('${table.table_name}', function (table) {`);
+        this.alterTableBegin(table);
         this.line(`    table.dropPrimary();`);
-        this.line('});');
+        this.alterTableEnd();
     }
     addPrimary(table) {
-        this.line(`await knex.schema.withSchema('${table.schema_name}').alterTable('${table.table_name}', function (table) {`);
+        this.alterTableBegin(table);
         this.setPrimary(table);
-        this.line('});');
+        this.alterTableEnd();
     }
     setPrimary(table) {
         const pkColumns = table.columns.filter(c => c.is_primary_key);
@@ -77,6 +89,8 @@ class CodeGenerator {
         this.line(`await knex.schema.withSchema('${table.schema_name}').createTable('${table.table_name}', function (table) {`);
         // Table columns
         table.columns.forEach(c => this.createColumn(c));
+        // Indexes
+        table.indexes.forEach(i => this.addIndex(i));
         // Primary key columns
         const primaryColumns = table.columns.filter(c => c.is_primary_key);
         if (primaryColumns.length > 0) {
@@ -177,6 +191,7 @@ class CodeGenerator {
         if (shouldRemakePrimaryKey) {
             this.addPrimary(table);
         }
+        this.line();
     }
     alterTableColumns(tables, columns) {
         Object.values(lodash_1.default.groupBy(columns, c => `${c.schema_name}.${c.table_name}`))
@@ -187,9 +202,11 @@ class CodeGenerator {
         });
     }
     _addTableIndexes(table, indexes) {
+        this.line(`// Add indexes to table '${table.schema_name}.${table.table_name}'`);
         this.alterTableBegin(table);
         indexes.map(i => this.addIndex(i));
         this.alterTableEnd();
+        this.line();
     }
     addTableIndexes(tables, indexes) {
         Object.values(lodash_1.default.groupBy(indexes, i => `${i.schema_name}.${i.table_name}`))
@@ -200,9 +217,11 @@ class CodeGenerator {
         });
     }
     _dropTableIndexes(table, indexes) {
+        this.line(`// Drop indexes from table '${table.schema_name}.${table.table_name}'`);
         this.alterTableBegin(table);
         indexes.map(i => this.dropIndex(i));
         this.alterTableEnd();
+        this.line();
     }
     dropTableIndexes(tables, indexes) {
         Object.values(lodash_1.default.groupBy(indexes, i => `${i.schema_name}.${i.table_name}`))

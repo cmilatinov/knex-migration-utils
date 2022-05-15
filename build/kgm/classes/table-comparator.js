@@ -46,7 +46,6 @@ class TableComparator {
                 table.string('table_name').notNullable();
                 table.string('index_name').notNullable();
                 table.json('column_names').notNullable();
-                table.boolean('is_clustered').notNullable();
                 table.boolean('is_unique').notNullable();
                 table.primary(['schema_name', 'table_name', 'index_name']);
             });
@@ -87,13 +86,12 @@ class TableComparator {
             .where('attrelid', this.db.raw('idx.oid'))
             .groupBy('attrelid')
             .as('column_names'))
-            .select('pgi.indisclustered as is_clustered')
             .select('pgi.indisunique as is_unique')
             .innerJoin('pg_class as idx', 'idx.oid', 'pgi.indexrelid')
             .innerJoin('pg_namespace as insp', 'insp.oid', 'idx.relnamespace')
             .innerJoin('pg_class as tbl', 'tbl.oid', 'pgi.indrelid')
             .innerJoin('pg_namespace as tnsp', 'tnsp.oid', 'tbl.relnamespace')
-            .whereNot('pgi.indisprimary')
+            .where('pgi.indisprimary', false)
             .whereIn('tnsp.nspname', this.config.schemas);
         // Query old index information
         this.oldIndexList = await this.db(`${this.args.schema}.table_index`);
@@ -141,7 +139,9 @@ class TableComparator {
             this.tablesToDrop,
             this.columnsToAlter,
             this.columnsToAdd,
-            this.columnsToDrop
+            this.columnsToDrop,
+            this.indexesToAdd,
+            this.indexesToDrop
         ].some(arr => arr.length > 0);
     }
     getDifferencesInfo() {
@@ -159,8 +159,25 @@ class TableComparator {
             indexesToDrop: this.indexesToDrop
         };
     }
-    getColumns() {
-        return this.columnList;
+    async updateMetadata() {
+        const columnTable = `${this.args.schema}.table_column`;
+        const indexTable = `${this.args.schema}.table_index`;
+        // Truncate tables
+        await this.db(columnTable).truncate();
+        await this.db(indexTable).truncate();
+        // Add new columns
+        if (this.columnList.length > 0) {
+            await this.db(columnTable)
+                .insert(this.columnList);
+        }
+        // Add new indexes
+        if (this.indexList.length > 0) {
+            await this.db(indexTable)
+                .insert(this.indexList.map(i => ({
+                ...i,
+                column_names: JSON.stringify(i.column_names)
+            })));
+        }
     }
     static columnEquals(a, b) {
         return lodash_1.default.isEqual({

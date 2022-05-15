@@ -2,9 +2,9 @@ import * as fs from 'fs';
 
 import { CodeGenerator } from './code-generator';
 import { TableComparator } from './table-comparator';
-import { Config } from '../interfaces/config';
+import { Config } from '../../common/interfaces/config';
 import { CODE_TEMPLATE_TS, CODE_TEMPLATE_JS } from '../utils/templates';
-import { ArgsObject } from '../cli';
+import { ArgsKGM } from '../cli';
 
 export class MigrationGenerator {
 
@@ -12,7 +12,7 @@ export class MigrationGenerator {
     private readonly _migrationUp: CodeGenerator;
     private readonly _migrationDown: CodeGenerator;
 
-    constructor(args: ArgsObject, config: Config) {
+    constructor(args: ArgsKGM, config: Config) {
         this._comparator = new TableComparator(args, config);
         this._migrationUp = new CodeGenerator();
         this._migrationDown = new CodeGenerator();

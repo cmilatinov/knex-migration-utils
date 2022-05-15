@@ -1,43 +1,16 @@
-import commandLineArgs from 'command-line-args';
 import * as fs from 'fs';
 import { DateTime } from 'luxon';
 import 'colors';
 
-import cliOptions, { ArgsObject, printHelp } from './cli';
+import cliOptions, { ArgsKGM, printHelp } from './cli';
 import { MigrationGenerator } from './classes/migration-generator';
-import loadModule from './utils/load-module';
-import logger from './utils/logger';
+import { loadArgsAndConfig } from '../common/utils/load-config';
+import logger from '../common/utils/logger';
 
 async function main() {
-    // Command line args
-    const args = commandLineArgs(cliOptions) as ArgsObject;
-
-    // Print help
-    if (args.help) {
-        printHelp();
-        process.exit(0);
-    }
-
     try {
-
-        // Load config file
-        let config;
-        try {
-            config = (await loadModule(args.config))();
-        } catch (err) {
-            console.log(err);
-            logger.error(`Config module '${args.config}' not found. Please verify that the file exists and try again.`);
-        }
-
-        // Check database config
-        if (!config.database) {
-            logger.error(`Missing database configuration. Please verify that your config module returns an object with the 'database' key.`);
-        }
-
-        // Check schema database config
-        if (!config.schemas || !Array.isArray(config.schemas) || (Array.isArray(config.schemas) && config.schemas.length <= 0)) {
-            logger.error(`Missing schema list in configuration. Please verify that your config module returns a non-empty array with the 'schemas' key.`);
-        }
+        // Command line args
+        const { args, config } = await loadArgsAndConfig<ArgsKGM>(cliOptions, printHelp);
 
         // Create generator
         const generator = new MigrationGenerator(args, config);
@@ -69,9 +42,8 @@ async function main() {
 
         // Close database connection (in order to stop process)
         await db.destroy();
-
     } catch (err) {
-        logger.error(err.message);
+        logger.error(`${err.message}.`);
     }
 }
 

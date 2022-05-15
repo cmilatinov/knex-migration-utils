@@ -26,35 +26,17 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const command_line_args_1 = __importDefault(require("command-line-args"));
 const fs = __importStar(require("fs"));
 const luxon_1 = require("luxon");
 require("colors");
-const load_module_1 = __importDefault(require("./load-module"));
-const migration_generator_1 = require("./migration-generator");
-const cli_1 = __importDefault(require("./cli"));
-const logger_1 = __importDefault(require("./logger"));
+const cli_1 = __importStar(require("./cli"));
+const migration_generator_1 = require("./classes/migration-generator");
+const load_config_1 = require("../common/utils/load-config");
+const logger_1 = __importDefault(require("../common/utils/logger"));
 async function main() {
-    // Command line args
-    const args = (0, command_line_args_1.default)(cli_1.default);
     try {
-        // Load config file
-        let config;
-        try {
-            config = (await (0, load_module_1.default)(args.config))();
-        }
-        catch (err) {
-            console.log(err);
-            logger_1.default.error(`Config module '${args.config}' not found. Please verify that the file exists and try again.`);
-        }
-        // Check database config
-        if (!config.database) {
-            logger_1.default.error(`Missing database configuration. Please verify that your config module returns an object with the 'database' key.`);
-        }
-        // Check schema database config
-        if (!config.schemas || !Array.isArray(config.schemas) || (Array.isArray(config.schemas) && config.schemas.length <= 0)) {
-            logger_1.default.error(`Missing schema list in configuration. Please verify that your config module returns a non-empty array with the 'schemas' key.`);
-        }
+        // Command line args
+        const { args, config } = await (0, load_config_1.loadArgsAndConfig)(cli_1.default, cli_1.printHelp);
         // Create generator
         const generator = new migration_generator_1.MigrationGenerator(args, config);
         const comparator = generator.getComparator();
@@ -67,7 +49,7 @@ async function main() {
         if (!args.reset) {
             if (comparator.hasDifferences()) {
                 const timestamp = luxon_1.DateTime.now().toFormat('yyyyMMddHHmmss');
-                const migrationFile = `${args.migrations}/${timestamp}_${args.file}${args.typescript ? '.ts' : '.js'}`;
+                const migrationFile = `${args.migrations}/${timestamp}_${args.filename}${args.typescript ? '.ts' : '.js'}`;
                 generator.generate(migrationFile, args.typescript);
                 logger_1.default.success(`Generated migration '${migrationFile}'.`);
             }
@@ -78,19 +60,13 @@ async function main() {
         else {
             logger_1.default.warn(`Resetting database metadata. No migration will be generated.`);
         }
-        // Truncate columns table
-        await db(`${args.schema}.table_column`).truncate();
-        // Add new columns
-        const { columnList } = comparator.getDifferencesInfo();
-        if (columnList.length > 0) {
-            await db(`${args.schema}.table_column`)
-                .insert(comparator.getColumns());
-        }
+        // Update metadata
+        await comparator.updateMetadata();
         // Close database connection (in order to stop process)
         await db.destroy();
     }
     catch (err) {
-        logger_1.default.error(err.message);
+        logger_1.default.error(`${err.message}.`);
     }
 }
 main().then();
