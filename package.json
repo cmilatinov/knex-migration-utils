@@ -1,9 +1,13 @@
 {
     "name": "knex-migration-utils",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "author": {
         "name": "Cristian Milatinov",
         "web": "https://github.com/redknight990"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/redknight990/knex-migration-utils.git"
     },
     "license": "MIT",
     "bin": {
