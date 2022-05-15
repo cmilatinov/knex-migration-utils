@@ -1,4 +1,4 @@
-# Knex Utils
+# Knex Migration Utils
 
 | Tool    | Description                                                                                                                                                |
 |---------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -86,7 +86,7 @@ Generate database types in the `src/types/database.ts` file:
 
 Generate database types in the `types.ts` file, using `subfolder/my_config_file` as the config module:
 
-`$ kgm types.ts -c subfolder/my_config_file`
+`$ kgt types.ts -c subfolder/my_config_file`
 
 ### Options
 
