@@ -1,9 +1,9 @@
 # Knex Utils
 
-|                    | Tool    | Description                                                                                                                                                |
-|--------------------|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| :white-check-mark: | **kgm** | Automatically generate migrations for your database based on the differences between its current state and its state during the last migration generation. |
-| :white-check-mark: | **kgt** | Automatically generate database types for use with the [typed-knex](https://github.com/wwwouter/typed-knex) package.                                       |
+| Tool    | Description                                                                                                                                                |
+|---------|------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **kgm** | Automatically generate migrations for your database based on the differences between its current state and its state during the last migration generation. |
+| **kgt** | Automatically generate database types for use with the [typed-knex](https://github.com/wwwouter/typed-knex) package.                                       |
 
 ## kgm &mdash; Knex Generate Migration
 
