@@ -41,7 +41,7 @@ export class CodeGenerator {
         this.line(`    table.${CodeGenerator.mapType(column.data_type, column.column_name)}`);
         this.line(`        ${column.is_nullable ? '.nullable()' : '.notNullable()'}`, '');
         if (column.default_value)
-            this.line(`        .defaultTo(knex.raw('${column.default_value}'))`, '', '\n    ');
+            this.line(`        .defaultTo(knex.raw(\`${column.default_value}\`))`, '', '\n    ');
     }
 
     private createColumn(column: TableColumn) {

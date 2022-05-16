@@ -1,6 +1,6 @@
 {
     "name": "knex-migration-utils",
-    "version": "0.0.8",
+    "version": "0.0.9",
     "author": {
         "name": "Cristian Milatinov",
         "web": "https://github.com/redknight990"
