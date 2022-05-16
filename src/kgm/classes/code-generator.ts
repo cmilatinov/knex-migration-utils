@@ -6,13 +6,20 @@ import { TableComparator } from './table-comparator';
 // TODO: Abstract this into another file as it is specific to sql dialects
 const typeMapping: { [key: string]: (str: string) => string } = {
     uuid: column => `uuid(${column})`,
+    text: column => `text(${column})`,
     varchar: column => `string(${column})`,
+    bpchar: column => `string(${column})`,
     boolean: column => `boolean(${column})`,
     bool: column => `boolean(${column})`,
+    smallint: column => `smallint(${column})`,
     int: column => `integer(${column})`,
+    bigint: column => `bigint(${column})`,
+    int2: column => `smallint(${column})`,
     int4: column => `integer(${column})`,
-    int8: column => `integer(${column})`,
+    int8: column => `bigint(${column})`,
     float: column => `float(${column})`,
+    float2: column => `float(${column}, 2)`,
+    float4: column => `float(${column}, 4)`,
     float8: column => `float(${column}, 8)`,
     timestamptz: column => `timestamp(${column}, { useTz: true })`,
     timestamp: column => `timestamp(${column}, { useTz: false })`
