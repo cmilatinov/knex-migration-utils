@@ -11,8 +11,9 @@ export interface ArgsBase {
     help: boolean;
 }
 
-export function loadConfig(moduleName: string) {
-    const dir = path.join(process.cwd(), path.dirname(moduleName));
+export function loadConfig(configPath: string) {
+    const moduleName = path.basename(configPath);
+    const dir = path.join(process.cwd(), path.dirname(configPath));
     const module = fs.readdirSync(dir)
         .find(f => path.basename(f, path.extname(f)) === moduleName);
     return require(`${dir}/${module}`);
