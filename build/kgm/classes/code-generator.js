@@ -12,8 +12,11 @@ const typeMapping = {
     varchar: column => `string(${column})`,
     boolean: column => `boolean(${column})`,
     bool: column => `boolean(${column})`,
+    int: column => `integer(${column})`,
     int4: column => `integer(${column})`,
     int8: column => `integer(${column})`,
+    float: column => `float(${column})`,
+    float8: column => `float(${column}, 8)`,
     timestamptz: column => `timestamp(${column}, { useTz: true })`,
     timestamp: column => `timestamp(${column}, { useTz: false })`
 };
