@@ -31,8 +31,9 @@ const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const command_line_args_1 = __importDefault(require("command-line-args"));
 const logger_1 = __importDefault(require("./logger"));
-function loadConfig(moduleName) {
-    const dir = path.join(process.cwd(), path.dirname(moduleName));
+function loadConfig(configPath) {
+    const moduleName = path.basename(configPath);
+    const dir = path.join(process.cwd(), path.dirname(configPath));
     const module = fs.readdirSync(dir)
         .find(f => path.basename(f, path.extname(f)) === moduleName);
     return require(`${dir}/${module}`);
