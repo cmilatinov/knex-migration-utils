@@ -16,7 +16,7 @@ export function loadConfig(configPath: string) {
     const dir = path.join(process.cwd(), path.dirname(configPath));
     const module = fs.readdirSync(dir)
         .find(f => path.basename(f, path.extname(f)) === moduleName);
-    return require(`${dir}/${module}`);
+    return import(`${dir}/${module}`);
 }
 
 export async function loadArgsAndConfig<T extends ArgsBase>(cliOptions: OptionDefinition[], printHelp: () => void) {
@@ -32,7 +32,7 @@ export async function loadArgsAndConfig<T extends ArgsBase>(cliOptions: OptionDe
     // Load config file
     let config: Config;
     try {
-        config = (await loadConfig(args.config))();
+        config = await loadConfig(args.config);
     } catch (err) {
         console.log(err);
         logger.error(`Config module '${args.config}' not found. ` +
