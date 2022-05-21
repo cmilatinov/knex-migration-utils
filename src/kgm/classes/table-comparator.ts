@@ -4,6 +4,7 @@ import { TableColumn, Table, TableIndex } from '../interfaces/table';
 import { Config } from '../../common/interfaces/config';
 import _ from 'lodash';
 import { ArgsKGM } from '../cli';
+import { EnumType } from '../interfaces/enum';
 
 export class TableComparator {
 
@@ -17,6 +18,9 @@ export class TableComparator {
     private indexList: TableIndex[];
     private oldIndexList: TableIndex[];
 
+    private enumList: EnumType[];
+    private oldEnumList: EnumType[];
+
     private tableList: Table[];
     private oldTableList: Table[];
 
@@ -29,6 +33,10 @@ export class TableComparator {
 
     private indexesToAdd: TableIndex[];
     private indexesToDrop: TableIndex[];
+
+    private enumsToAlter: [EnumType, EnumType][];
+    private enumsToAdd: EnumType[];
+    private enumsToDrop: EnumType[];
 
     constructor(args: ArgsKGM, config: Config) {
         this.args = args;
@@ -76,6 +84,17 @@ export class TableComparator {
                     table.json('column_names').notNullable();
                     table.boolean('is_unique').notNullable();
                     table.primary(['schema_name', 'table_name', 'index_name']);
+                });
+        }
+
+        // Create enums table
+        if (!(await this.db.schema.withSchema(this.args.schema).hasTable('enum'))) {
+            await this.db.schema.withSchema(this.args.schema)
+                .createTable('enum', function (table) {
+                    table.string('schema_name').notNullable();
+                    table.string('enum_name').notNullable();
+                    table.json('values').notNullable();
+                    table.primary(['schema_name', 'enum_name']);
                 });
         }
     }
@@ -131,6 +150,19 @@ export class TableComparator {
 
         // Query old index information
         this.oldIndexList = await this.db(`${this.args.schema}.table_index`);
+
+        // Build current enum list
+        this.enumList = await this.db('pg_type as t')
+            .select('n.nspname as schema_name')
+            .select('t.typname as enum_name')
+            .select(this.db.raw('json_agg(e.enumlabel) as values'))
+            .innerJoin('pg_enum as e', 'e.enumtypid', 't.oid')
+            .innerJoin('pg_namespace as n', 'n.oid', 't.typnamespace')
+            .groupBy('schema_name')
+            .groupBy('enum_name');
+
+        // Query old enum information
+        this.oldEnumList = await this.db(`${this.args.schema}.enum`);
     }
 
     private computeDifferences() {
@@ -183,6 +215,18 @@ export class TableComparator {
 
         this.indexesToDrop = _.differenceWith(this.oldIndexList, this.indexList, _.isEqual)
             .filter(i => !tableListToDrop.includes(`${i.schema_name}.${i.table_name}`));
+
+        this.enumsToAlter = _.differenceWith(
+            _.intersectionWith(this.enumList, this.oldEnumList, TableComparator.enumEquals),
+            _.intersectionWith(this.oldEnumList, this.enumList, TableComparator.enumEquals),
+            _.isEqual
+        ).map(dest => [this.oldEnumList.find(src => TableComparator.enumEquals(dest, src)), dest]);
+
+        this.enumsToAdd = _.differenceWith(this.enumList, this.oldEnumList, TableComparator.enumEquals)
+            .filter(e => !this.enumsToAlter.find(([_, dest]) => TableComparator.enumEquals(e, dest)));
+
+        this.enumsToDrop = _.differenceWith(this.oldEnumList, this.enumList, TableComparator.enumEquals)
+            .filter(e => !this.enumsToAlter.find(([_, dest]) => TableComparator.enumEquals(e, dest)));
     }
 
 
@@ -217,10 +261,12 @@ export class TableComparator {
     public async updateMetadata() {
         const columnTable = `${this.args.schema}.table_column`;
         const indexTable = `${this.args.schema}.table_index`;
+        const enumTable = `${this.args.schema}.enum`;
 
         // Truncate tables
         await this.db(columnTable).truncate();
         await this.db(indexTable).truncate();
+        await this.db(enumTable).truncate();
 
         // Add new columns
         if (this.columnList.length > 0) {
@@ -234,6 +280,15 @@ export class TableComparator {
                 .insert(this.indexList.map(i => ({
                     ...i,
                     column_names: JSON.stringify(i.column_names)
+                })));
+        }
+
+        // Add new enums
+        if (this.enumList.length > 0) {
+            await this.db(enumTable)
+                .insert(this.enumList.map(e => ({
+                    ...e,
+                    values: JSON.stringify(e.values)
                 })));
         }
     }
@@ -250,15 +305,13 @@ export class TableComparator {
         });
     }
 
-    public static indexEquals(a: TableIndex, b: TableIndex) {
+    public static enumEquals(a: EnumType, b: EnumType) {
         return _.isEqual({
             schema_name: a.schema_name,
-            table_name: a.table_name,
-            index_name: a.index_name
+            enum_name: a.enum_name
         }, {
             schema_name: b.schema_name,
-            table_name: b.table_name,
-            index_name: b.index_name
+            enum_name: b.enum_name
         });
     }
 }
