@@ -14,9 +14,16 @@ import cliOptions, { ArgsKGT, printHelp } from './cli';
 const typeMapping: { [key: string]: string } = {
     varchar: 'string',
     text: 'string',
+    int2: 'number',
     int4: 'number',
     int8: 'number',
+    int: 'number',
+    float2: 'number',
+    float4: 'number',
+    float8: 'number',
+    float: 'number',
     timestamptz: 'string',
+    timestamp: 'string',
     uuid: 'string'
 };
 
