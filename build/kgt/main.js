@@ -49,6 +49,8 @@ const typeMapping = {
     float: 'number',
     timestamptz: 'string',
     timestamp: 'string',
+    json: 'any',
+    jsonb: 'any',
     uuid: 'string'
 };
 function camelCase(str) {
