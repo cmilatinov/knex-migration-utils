@@ -25,7 +25,9 @@ const typeMapping = {
     float4: column => `float(${column}, 4)`,
     float8: column => `float(${column}, 8)`,
     timestamptz: column => `timestamp(${column}, { useTz: true })`,
-    timestamp: column => `timestamp(${column}, { useTz: false })`
+    timestamp: column => `timestamp(${column}, { useTz: false })`,
+    json: column => `json(${column})`,
+    jsonb: column => `jsonb(${column})`
 };
 class CodeGenerator {
     constructor() {
