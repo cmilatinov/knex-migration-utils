@@ -24,6 +24,8 @@ const typeMapping: { [key: string]: string } = {
     float: 'number',
     timestamptz: 'string',
     timestamp: 'string',
+    json: 'any',
+    jsonb: 'any',
     uuid: 'string'
 };
 

@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/knex-utils.iml" filepath="$PROJECT_DIR$/.idea/knex-utils.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/knex-migration-utils.iml" filepath="$PROJECT_DIR$/.idea/knex-migration-utils.iml" />
     </modules>
   </component>
 </project>
