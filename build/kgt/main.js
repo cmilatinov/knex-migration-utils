@@ -37,21 +37,26 @@ const logger_1 = __importDefault(require("../common/utils/logger"));
 const cli_1 = __importStar(require("./cli"));
 // TODO: Abstract this into another file as it is specific to sql dialects
 const typeMapping = {
-    varchar: 'string',
+    uuid: 'string',
     text: 'string',
+    varchar: 'string',
+    bpchar: 'string',
+    boolean: 'boolean',
+    bool: 'boolean',
+    smallint: 'number',
+    int: 'number',
+    bigint: 'number',
     int2: 'number',
     int4: 'number',
     int8: 'number',
-    int: 'number',
+    float: 'number',
     float2: 'number',
     float4: 'number',
     float8: 'number',
-    float: 'number',
     timestamptz: 'string',
     timestamp: 'string',
     json: 'any',
-    jsonb: 'any',
-    uuid: 'string'
+    jsonb: 'any'
 };
 function camelCase(str) {
     str = lodash_1.default.camelCase(str);
