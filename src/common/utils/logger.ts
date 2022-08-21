@@ -1,12 +1,12 @@
 export default {
     success(message: string) {
-        console.log(`[SUCCESS]: ${message}`.green);
+        console.log(`${'[SUCCESS]'.bold} ${message}`.green);
     },
     warn(message: string) {
-        console.log(`[WARN]: ${message}`.yellow);
+        console.log(`${'[WARN]'.bold} ${message}`.yellow);
     },
     error(message: string) {
-        console.log(`[ERROR]: ${message}`.red);
+        console.log(`${'[ERROR]'.bold} ${message}`.red);
         process.exit(0);
     }
 };

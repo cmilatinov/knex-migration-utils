@@ -11,12 +11,13 @@ export interface ArgsBase {
     help: boolean;
 }
 
-export function loadConfig(configPath: string) {
+export async function loadConfig(configPath: string) {
     const moduleName = path.basename(configPath);
     const dir = path.join(process.cwd(), path.dirname(configPath));
-    const module = fs.readdirSync(dir)
+    const moduleFile = fs.readdirSync(dir)
         .find(f => path.basename(f, path.extname(f)) === moduleName);
-    return import(`${dir}/${module}`);
+    const module = await import(`${dir}/${moduleFile}`);
+    return module.default || module;
 }
 
 export async function loadArgsAndConfig<T extends ArgsBase>(cliOptions: OptionDefinition[], printHelp: () => void) {

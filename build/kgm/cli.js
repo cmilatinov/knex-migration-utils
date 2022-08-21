@@ -15,8 +15,8 @@ const cliOptions = [
         defaultValue: 'migration',
         description: 'Specifies the name of the migration file to generate. ' +
             'Note that a timestamp is automatically appended to the start of the given name. ' +
-            `If the given migration name is 'migration', then the file containing the ` +
-            `migration might be called '20220514170206_migration.js'.`
+            `If the given migration name is {underline migration}, then the file containing the ` +
+            `migration might be called {underline 20220514170206_migration.js}.`
     },
     {
         name: 'config',
@@ -80,7 +80,7 @@ const cliSections = [
         header: 'Examples',
         content: [
             {
-                desc: `Generate a migration called 'drop_table'.`,
+                desc: `Generate a migration called {underline drop_table}.`,
                 example: '$ kgm drop_table'
             },
             {},
@@ -90,13 +90,13 @@ const cliSections = [
             },
             {},
             {
-                desc: `Generate a migration called 'create_table' in typescript, using 'meta_schema' ` +
-                    `as the metadata schema and 'subfolder/my_config_file' as the config module.`,
+                desc: `Generate a migration called {underline create_table} in typescript, using {underline meta_schema} ` +
+                    `as the metadata schema and {underline subfolder/my_config_file} as the config module.`,
                 example: '$ kgm create_table -t -s meta_schema -c subfolder/my_config_file'
             },
             {},
             {
-                desc: `Generate a migration called 'drop_index', in the 'my_migrations' folder.`,
+                desc: `Generate a migration called {underline drop_index}, in the {underline my_migrations} folder.`,
                 example: '$ kgm drop_index -m my_migrations'
             }
         ]

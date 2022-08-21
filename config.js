@@ -1,4 +1,5 @@
-module.exports = {
+exports.__esModule = true;
+exports.default = {
     schemas: [
         'test'
     ],

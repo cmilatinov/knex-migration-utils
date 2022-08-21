@@ -31,12 +31,13 @@ const path = __importStar(require("path"));
 const fs = __importStar(require("fs"));
 const command_line_args_1 = __importDefault(require("command-line-args"));
 const logger_1 = __importDefault(require("./logger"));
-function loadConfig(configPath) {
+async function loadConfig(configPath) {
     const moduleName = path.basename(configPath);
     const dir = path.join(process.cwd(), path.dirname(configPath));
-    const module = fs.readdirSync(dir)
+    const moduleFile = fs.readdirSync(dir)
         .find(f => path.basename(f, path.extname(f)) === moduleName);
-    return Promise.resolve().then(() => __importStar(require(`${dir}/${module}`)));
+    const module = await Promise.resolve().then(() => __importStar(require(`${dir}/${moduleFile}`)));
+    return module.default || module;
 }
 exports.loadConfig = loadConfig;
 async function loadArgsAndConfig(cliOptions, printHelp) {
